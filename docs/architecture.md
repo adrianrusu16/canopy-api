@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved design. Implementation planning is the next step.
+Approved design. The `canopy.v1` protobuf contract is canonical and Canopy is consuming the generated BSR SDK. Native identity, auth abuse controls, and the durable profile/history/library/likes/preferences/playlist auth boundary are partially wired in Canopy; Google login/linking and full PandaEngine adoption remain follow-up work.
 
 ## Purpose
 
@@ -168,8 +168,10 @@ service.
 
 ### Authentication And Privacy
 
-Authentication is carried only in gRPC metadata. Deprecated request-body token
-fields are removed.
+Authentication is carried only in gRPC metadata. Native durable-state calls use
+`authorization: Bearer <identity access token>`; Canopy verifies the Ed25519
+access token, rechecks the referenced session, and then resolves the profile
+that owns application state.
 
 - Anonymous-capable methods accept absent authorization metadata.
 - Invalid supplied credentials return `UNAUTHENTICATED` and never
@@ -179,7 +181,8 @@ fields are removed.
   existence would leak information.
 
 Anonymous playback remains stateless and cannot create durable history,
-libraries, likes, preferences, or playlists.
+libraries, likes, preferences, or playlists. Deprecated request-body token
+fields are not part of the canonical `canopy.v1` contract.
 
 ### Catalog, Search, And Discovery
 
@@ -234,11 +237,15 @@ an explicit transfer or administrative deletion workflow.
 
 Saved-track, like, and membership mutations are idempotent. Repeating a save or
 like returns the existing relationship; removing an absent relationship
-succeeds.
+succeeds. List responses return resource shapes that combine renderable
+`TrackSummary` data with relationship metadata: `SavedTrack.saved_at`,
+`LikedTrack.liked_at`, and `PlaylistTrack.position` / `added_at`.
 
-Playlist ordering is server-authoritative. Reorder requests contain the full
-ordered membership and an expected playlist revision. A stale revision returns
-`ABORTED` instead of overwriting a concurrent edit.
+Playlist ordering is server-authoritative. `AddPlaylistTrack` returns the
+resulting `PlaylistTrack`; `ReorderPlaylistTracks` returns the updated
+`Playlist`. Reorder requests contain the full ordered membership and an
+expected playlist revision. A stale revision returns `ABORTED` instead of
+overwriting a concurrent edit.
 ## Consumer Architecture
 
 ```text

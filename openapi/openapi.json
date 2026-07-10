@@ -3,7 +3,7 @@
   "info": {
     "title": "Canopy gRPC API",
     "version": "0.1.0",
-    "description": "Companion contract for Canopy's gRPC API and its private Nginx streaming authorization endpoint. The /canopy.Canopy/* entries describe gRPC methods for API discovery; Canopy does not expose them as a separate REST API."
+    "description": "Companion contract for Canopy's gRPC API and its private Nginx streaming authorization endpoint. The /canopy.* entries describe gRPC methods for API discovery; Canopy does not expose them as a separate REST API. Protobuf remains the canonical contract."
   },
   "servers": [
     {
@@ -714,7 +714,7 @@
       "post": {
         "summary": "List logged-in library items",
         "operationId": "ListLibraryItems",
-        "description": "Requires gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions are not accepted and never create backend durable state. Results are profile-owned saved tracks ordered newest first.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token>. Anonymous sessions are not accepted and never create backend durable state. Results are profile-owned saved tracks ordered newest first and include saved_at relationship metadata.",
         "requestBody": {
           "required": true,
           "content": {
@@ -731,7 +731,7 @@
             "content": {
               "application/protobuf": {
                 "schema": {
-                  "$ref": "#/components/schemas/ListLibraryItemsResponse"
+                  "$ref": "#/components/schemas/ListSavedTracksResponse"
                 }
               }
             }
@@ -834,7 +834,7 @@
       "post": {
         "summary": "List logged-in liked tracks",
         "operationId": "ListLikedTracks",
-        "description": "Requires gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions are not accepted and never create backend durable state. Results are profile-owned liked tracks ordered newest first.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token>. Anonymous sessions are not accepted and never create backend durable state. Results are profile-owned liked tracks ordered newest first and include liked_at relationship metadata.",
         "requestBody": {
           "required": true,
           "content": {
@@ -979,7 +979,7 @@
             "content": {
               "application/protobuf": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreatePlaylistResponse"
+                  "$ref": "#/components/schemas/Playlist"
                 }
               }
             }
@@ -1019,7 +1019,7 @@
             "content": {
               "application/protobuf": {
                 "schema": {
-                  "$ref": "#/components/schemas/UpdatePlaylistResponse"
+                  "$ref": "#/components/schemas/Playlist"
                 }
               }
             }
@@ -1059,7 +1059,7 @@
             "content": {
               "application/protobuf": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeletePlaylistResponse"
+                  "$ref": "#/components/schemas/Empty"
                 }
               }
             }
@@ -1114,7 +1114,7 @@
       "post": {
         "summary": "Add track to private playlist",
         "operationId": "AddPlaylistTrack",
-        "description": "Requires an existing logged-in profile and gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions are not accepted and never create playlist state. Adding an existing track is idempotent; omit has_position to append.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions are not accepted and never create playlist state. Adding an existing track is idempotent; omit position to append. Returns the resulting PlaylistTrack resource.",
         "security": [
           {
             "BearerAuth": []
@@ -1139,7 +1139,7 @@
             "content": {
               "application/protobuf": {
                 "schema": {
-                  "$ref": "#/components/schemas/AddPlaylistTrackResponse"
+                  "$ref": "#/components/schemas/PlaylistTrack"
                 }
               }
             }
@@ -1179,7 +1179,7 @@
             "content": {
               "application/protobuf": {
                 "schema": {
-                  "$ref": "#/components/schemas/RemovePlaylistTrackResponse"
+                  "$ref": "#/components/schemas/Empty"
                 }
               }
             }
@@ -1194,7 +1194,7 @@
       "post": {
         "summary": "Reorder private playlist tracks",
         "operationId": "ReorderPlaylistTracks",
-        "description": "Requires an existing logged-in profile and gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions are not accepted and never create playlist state. track_ids must be the complete current membership with no duplicates or foreign IDs.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions are not accepted and never create playlist state. track_ids must be the complete current membership with no duplicates or foreign IDs. Returns the updated Playlist resource.",
         "security": [
           {
             "BearerAuth": []
@@ -1219,7 +1219,7 @@
             "content": {
               "application/protobuf": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReorderPlaylistTracksResponse"
+                  "$ref": "#/components/schemas/Playlist"
                 }
               }
             }
@@ -1234,7 +1234,7 @@
       "post": {
         "summary": "List private playlist tracks",
         "operationId": "ListPlaylistTracks",
-        "description": "Requires an existing logged-in profile and gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions are not accepted and never create playlist state. Returns renderable MediaItem values in explicit playlist order.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions are not accepted and never create playlist state. Returns PlaylistTrack resources in explicit playlist order, including position and added_at relationship metadata.",
         "security": [
           {
             "BearerAuth": []
@@ -2002,33 +2002,23 @@
       "ListLikedTracksRequest": {
         "type": "object",
         "properties": {
-          "limit": {
-            "type": "integer",
-            "format": "int32",
-            "description": "Maximum number of liked tracks to return"
-          },
-          "offset": {
-            "type": "integer",
-            "format": "int32",
-            "description": "Offset for pagination"
+          "page": {
+            "$ref": "#/components/schemas/PageRequest",
+            "description": "Pagination request for liked tracks."
           }
         }
       },
       "ListLikedTracksResponse": {
         "type": "object",
         "properties": {
-          "items": {
+          "tracks": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/MediaItem"
+              "$ref": "#/components/schemas/LikedTrack"
             }
           },
-          "total_count": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "has_more": {
-            "type": "boolean"
+          "page_info": {
+            "$ref": "#/components/schemas/PageInfo"
           }
         }
       },
@@ -2069,25 +2059,31 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "Stable playlist identifier"
+            "description": "Stable playlist identifier."
           },
           "name": {
             "type": "string",
-            "description": "Human-readable playlist name"
+            "description": "Human-readable playlist name."
           },
           "description": {
             "type": "string",
-            "description": "Optional playlist description"
+            "description": "Optional playlist description."
           },
-          "created_at_epoch_ms": {
+          "revision": {
             "type": "integer",
             "format": "int64",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Server-maintained playlist revision."
           },
-          "updated_at_epoch_ms": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Playlist creation time."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Playlist last-update time."
           }
         }
       },
@@ -2146,26 +2142,12 @@
           }
         }
       },
-      "DeletePlaylistResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean"
-          }
-        }
-      },
       "ListPlaylistsRequest": {
         "type": "object",
         "properties": {
-          "limit": {
-            "type": "integer",
-            "format": "int32",
-            "description": "Maximum playlists to return"
-          },
-          "offset": {
-            "type": "integer",
-            "format": "int32",
-            "description": "Offset for pagination"
+          "page": {
+            "$ref": "#/components/schemas/PageRequest",
+            "description": "Pagination request for playlists."
           }
         }
       },
@@ -2178,12 +2160,8 @@
               "$ref": "#/components/schemas/Playlist"
             }
           },
-          "total_count": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "has_more": {
-            "type": "boolean"
+          "page_info": {
+            "$ref": "#/components/schemas/PageInfo"
           }
         }
       },
@@ -2192,29 +2170,17 @@
         "properties": {
           "playlist_id": {
             "type": "string",
-            "description": "Owned playlist to modify"
+            "description": "Owned playlist to modify."
           },
           "track_id": {
             "type": "string",
-            "description": "Catalog track to add"
+            "description": "Catalog track to add."
           },
           "position": {
             "type": "integer",
             "format": "int32",
             "minimum": 0,
-            "description": "Requested zero-based position"
-          },
-          "has_position": {
-            "type": "boolean",
-            "description": "When false, append the track"
-          }
-        }
-      },
-      "AddPlaylistTrackResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean"
+            "description": "Optional requested zero-based position; omit to append."
           }
         }
       },
@@ -2231,35 +2197,25 @@
           }
         }
       },
-      "RemovePlaylistTrackResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean"
-          }
-        }
-      },
       "ReorderPlaylistTracksRequest": {
         "type": "object",
         "description": "The ordered track_ids list must contain every current playlist track exactly once.",
         "properties": {
           "playlist_id": {
             "type": "string",
-            "description": "Owned playlist to reorder"
+            "description": "Owned playlist to reorder."
           },
           "track_ids": {
             "type": "array",
             "items": {
               "type": "string"
             }
-          }
-        }
-      },
-      "ReorderPlaylistTracksResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "Expected playlist revision for optimistic concurrency."
           }
         }
       },
@@ -2268,35 +2224,25 @@
         "properties": {
           "playlist_id": {
             "type": "string",
-            "description": "Owned playlist to read"
+            "description": "Owned playlist to read."
           },
-          "limit": {
-            "type": "integer",
-            "format": "int32",
-            "description": "Maximum tracks to return"
-          },
-          "offset": {
-            "type": "integer",
-            "format": "int32",
-            "description": "Offset for pagination"
+          "page": {
+            "$ref": "#/components/schemas/PageRequest",
+            "description": "Pagination request for playlist tracks."
           }
         }
       },
       "ListPlaylistTracksResponse": {
         "type": "object",
         "properties": {
-          "items": {
+          "tracks": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/MediaItem"
+              "$ref": "#/components/schemas/PlaylistTrack"
             }
           },
-          "total_count": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "has_more": {
-            "type": "boolean"
+          "page_info": {
+            "$ref": "#/components/schemas/PageInfo"
           }
         }
       },
@@ -2395,6 +2341,141 @@
             "minimum": 0
           }
         }
+      },
+      "PageRequest": {
+        "type": "object",
+        "properties": {
+          "page_size": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0,
+            "description": "Requested page size; zero selects the server default."
+          },
+          "page_token": {
+            "type": "string",
+            "description": "Opaque token returned by a previous page."
+          }
+        }
+      },
+      "PageInfo": {
+        "type": "object",
+        "properties": {
+          "next_page_token": {
+            "type": "string",
+            "description": "Opaque token for the next page, if more results are available."
+          },
+          "has_more": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TrackSummary": {
+        "type": "object",
+        "description": "Renderable catalog track summary from canopy.v1.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable track identifier."
+          },
+          "title": {
+            "type": "string"
+          },
+          "artist": {
+            "type": "string"
+          },
+          "album": {
+            "type": "string"
+          },
+          "artwork_uri": {
+            "type": "string",
+            "description": "Optional artwork reference."
+          },
+          "duration_ms": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "Track duration in milliseconds."
+          },
+          "is_explicit": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SavedTrack": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "$ref": "#/components/schemas/TrackSummary"
+          },
+          "saved_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Time the track was saved."
+          }
+        }
+      },
+      "LikedTrack": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "$ref": "#/components/schemas/TrackSummary"
+          },
+          "liked_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Time the track was liked."
+          }
+        }
+      },
+      "PlaylistTrack": {
+        "type": "object",
+        "properties": {
+          "playlist_id": {
+            "type": "string",
+            "description": "Playlist identifier."
+          },
+          "track": {
+            "$ref": "#/components/schemas/TrackSummary"
+          },
+          "position": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0,
+            "description": "Zero-based playlist position."
+          },
+          "added_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Time the track was added to the playlist."
+          }
+        }
+      },
+      "ListSavedTracksRequest": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "$ref": "#/components/schemas/PageRequest",
+            "description": "Pagination request for saved tracks."
+          }
+        }
+      },
+      "ListSavedTracksResponse": {
+        "type": "object",
+        "properties": {
+          "tracks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SavedTrack"
+            }
+          },
+          "page_info": {
+            "$ref": "#/components/schemas/PageInfo"
+          }
+        }
+      },
+      "Empty": {
+        "type": "object",
+        "description": "google.protobuf.Empty"
       }
     },
     "securitySchemes": {
@@ -2413,18 +2494,19 @@
   },
   "x-canopy-docs": {
     "persistenceStatus": "PostgreSQL provider ingest is transactional and idempotent by provider identity; discovery materialization uses one representative asset per track.",
-    "sessionControlStatus": "Playback control RPCs mutate SessionRepository state; empty session_id maps to the default session.",
+    "sessionControlStatus": "PandaEngine owns playback control and queue/session state. Canonical canopy.v1 playback RPCs resolve authorized playback sources only; prototype session-control projections are noncanonical legacy documentation until the companion is fully regenerated.",
     "providerFixtureStartup": "Set CANOPY_PROVIDER_FIXTURE_PATH in PostgreSQL mode to ingest a local ProviderTrack fixture before serving gRPC.",
     "healthStatus": "Health responses include aggregate status plus dependency details. PostgreSQL and managed local media are the active readiness dependencies.",
-    "authModel": "Anonymous users may browse, search, and play, but anonymous sessions are not durable users and receive no backend history, library, likes, preferences, or playlists. Durable state starts with UpsertProfile and a verified login token sent through gRPC metadata authorization: Bearer <token> or x-canopy-auth-token; request-body auth_token remains a compatibility fallback only for older profile/history RPCs.",
+    "authModel": "Anonymous users may browse, search, and play, but anonymous sessions are not durable users and receive no backend history, library, likes, preferences, playlists, or durable sessions. Durable state RPCs in the bounded canopy.v1 services require native identity metadata authorization: Bearer <identity access token>; Canopy verifies the Ed25519 access token and rechecks session state before resolving profiles. Auth abuse controls use hashed fixed-window buckets; registration and password-login throttles may surface RESOURCE_EXHAUSTED, while generic verification-resend and password-reset requests remain accepted when throttled.",
     "playbackResolution": "ResolvePlayback accepts track_id, optional session_id, and optional gRPC auth metadata. The configured owner receives owner-scoped personal media first with public fallback; anonymous and non-owner callers receive release-safe public media only. Invalid supplied auth is rejected, inaccessible personal media is concealed as not found, and successful resolution loads the track into the session.",
     "storageModel": "Active playback uses Canopy-managed local media authorized by Canopy and served through Nginx. No external catalog or object-storage provider is wired into the runtime; RustFS remains optional Compose infrastructure only.",
     "profileStatus": "UpsertProfile verifies metadata auth, upserts profiles(external_user_id), and stores history_enabled as the logged-in user history preference.",
     "historyStatus": "Playback history is an append-only profile-owned event ledger. Lifecycle RPCs require metadata auth. Disabling history atomically and irreversibly purges existing events, and consent-safe recording prevents concurrent repopulation. Anonymous sessions never create or read backend history.",
-    "libraryStatus": "Library RPCs require metadata auth and persist profile-owned saved tracks only for logged-in users; anonymous sessions never create backend library rows.",
-    "likesStatus": "Like RPCs require metadata auth and persist profile-owned positive track likes only for logged-in users.",
-    "preferencesStatus": "Preference RPCs require metadata auth and store a profile-owned JSON object; anonymous client preferences remain client-side.",
-    "playlistStatus": "Playlist RPCs require metadata auth and an existing profile. Private playlists and ordered track memberships persist under profiles.id; anonymous sessions never create playlist rows. ReorderPlaylistTracks requires the complete current membership exactly once.",
-    "contractModel": "Protobuf is the canonical RPC contract. This OpenAPI document is a human- and tooling-friendly companion for the gRPC methods plus the private HTTP stream-authorization boundary; it does not imply REST transcoding."
+    "libraryStatus": "Library RPCs require native identity metadata auth and persist profile-owned saved tracks only for logged-in users. Saved-track list resources include TrackSummary plus saved_at relationship metadata.",
+    "likesStatus": "Like RPCs require native identity metadata auth and persist profile-owned positive track likes only for logged-in users. Liked-track list resources include TrackSummary plus liked_at relationship metadata.",
+    "preferencesStatus": "Preference RPCs require native identity metadata auth and store a profile-owned JSON object; anonymous client preferences remain client-side.",
+    "playlistStatus": "Playlist RPCs require native identity metadata auth and an existing profile. Private playlists and ordered track memberships persist under profiles.id; anonymous sessions never create playlist rows. AddPlaylistTrack returns PlaylistTrack, ReorderPlaylistTracks returns Playlist, and playlist-track list resources include position and added_at relationship metadata.",
+    "contractModel": "Protobuf is the canonical RPC contract. This OpenAPI document is a human- and tooling-friendly companion for the gRPC methods plus the private HTTP stream-authorization boundary; it does not imply REST transcoding or replace Buf-generated protobuf documentation.",
+    "collectionStatus": "Saved-track, liked-track, and playlist-track list responses use resource shapes that include both renderable TrackSummary data and relationship metadata such as saved_at, liked_at, position, and added_at."
   }
 }

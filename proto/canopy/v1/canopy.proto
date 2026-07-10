@@ -67,6 +67,28 @@ service PlaylistService {
   rpc ListPlaylistTracks(ListPlaylistTracksRequest) returns (ListPlaylistTracksResponse);
 }
 
+// Account identity, credentials, verification, and per-device sessions.
+service AuthService {
+  rpc RegisterPassword(RegisterPasswordRequest) returns (GenericAuthResponse);
+  rpc ResendVerification(ResendVerificationRequest) returns (GenericAuthResponse);
+  rpc VerifyEmail(VerifyEmailRequest) returns (SessionEnvelope);
+  rpc LoginPassword(LoginPasswordRequest) returns (SessionEnvelope);
+  rpc RequestPasswordReset(RequestPasswordResetRequest) returns (GenericAuthResponse);
+  rpc CompletePasswordReset(CompletePasswordResetRequest) returns (GenericAuthResponse);
+  rpc ChangePassword(ChangePasswordRequest) returns (GenericAuthResponse);
+  rpc BeginGoogleLogin(BeginGoogleLoginRequest) returns (BeginGoogleLoginResponse);
+  rpc CompleteGoogleLogin(CompleteGoogleLoginRequest) returns (GoogleLoginResponse);
+  rpc LinkGoogle(LinkGoogleRequest) returns (GenericAuthResponse);
+  rpc UnlinkGoogle(UnlinkGoogleRequest) returns (GenericAuthResponse);
+  rpc RefreshSession(RefreshSessionRequest) returns (SessionEnvelope);
+  rpc Logout(LogoutRequest) returns (GenericAuthResponse);
+  rpc LogoutAll(LogoutAllRequest) returns (GenericAuthResponse);
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+  rpc RevokeSession(RevokeSessionRequest) returns (GenericAuthResponse);
+  rpc GetAccount(GetAccountRequest) returns (GetAccountResponse);
+  rpc DeleteAccount(DeleteAccountRequest) returns (GenericAuthResponse);
+}
+
 // Rich application and dependency status.
 service SystemService {
   rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
@@ -354,6 +376,129 @@ message ListPlaylistTracksResponse {
   repeated PlaylistTrack tracks = 1;
   PageInfo page_info = 2;
 }
+
+message GenericAuthResponse {
+  bool accepted = 1;
+}
+
+message AccountSummary {
+  string id = 1;
+  string primary_email = 2;
+  string status = 3;
+  google.protobuf.Timestamp created_at = 4;
+}
+
+message SessionSummary {
+  string id = 1;
+  string device_label = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp last_used_at = 4;
+  google.protobuf.Timestamp expires_at = 5;
+  bool current = 6;
+}
+
+message SessionEnvelope {
+  string access_token = 1;
+  string refresh_token = 2;
+  int64 access_expires_at_epoch_ms = 3;
+  int64 refresh_expires_at_epoch_ms = 4;
+  AccountSummary account = 5;
+  SessionSummary session = 6;
+}
+
+message RegisterPasswordRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message ResendVerificationRequest {
+  string email = 1;
+}
+
+message VerifyEmailRequest {
+  string verification_token = 1;
+  string device_label = 2;
+}
+
+message LoginPasswordRequest {
+  string email = 1;
+  string password = 2;
+  string device_label = 3;
+}
+
+message RequestPasswordResetRequest {
+  string email = 1;
+}
+
+message CompletePasswordResetRequest {
+  string reset_token = 1;
+  string new_password = 2;
+}
+
+message ChangePasswordRequest {
+  string current_password = 1;
+  string new_password = 2;
+}
+
+message BeginGoogleLoginRequest {}
+
+message BeginGoogleLoginResponse {
+  string challenge_id = 1;
+  string nonce = 2;
+  google.protobuf.Timestamp expires_at = 3;
+}
+
+message CompleteGoogleLoginRequest {
+  string challenge_id = 1;
+  string id_token = 2;
+  string device_label = 3;
+}
+
+message AccountLinkRequired {
+  string link_challenge_id = 1;
+}
+
+message GoogleLoginResponse {
+  oneof result {
+    SessionEnvelope session = 1;
+    AccountLinkRequired account_link_required = 2;
+  }
+}
+
+message LinkGoogleRequest {
+  string link_challenge_id = 1;
+}
+
+message UnlinkGoogleRequest {}
+
+message RefreshSessionRequest {
+  string refresh_token = 1;
+}
+
+message LogoutRequest {}
+
+message LogoutAllRequest {}
+
+message ListSessionsRequest {
+  PageRequest page = 1;
+}
+
+message ListSessionsResponse {
+  repeated SessionSummary sessions = 1;
+  PageInfo page_info = 2;
+}
+
+message RevokeSessionRequest {
+  string session_id = 1;
+}
+
+message GetAccountRequest {}
+
+message GetAccountResponse {
+  AccountSummary account = 1;
+}
+
+message DeleteAccountRequest {}
 
 message GetStatusRequest {}
 

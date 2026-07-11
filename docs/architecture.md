@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved design. The `canopy.v1` protobuf contract is canonical and Canopy is consuming the generated BSR SDK. Native identity, auth abuse controls, and the durable profile/history/library/likes/preferences/playlist auth boundary are partially wired in Canopy; Google login/linking and full PandaEngine adoption remain follow-up work.
+Approved design. The `canopy.v1` protobuf contract is canonical and Canopy is consuming the generated BSR SDK. Native identity, auth abuse controls, Google login/linking, and the durable profile/history/library/likes/preferences/playlist auth boundary are partially wired in Canopy. Google ID-token verification is enabled when Canopy is configured with accepted Google OAuth client IDs; full PandaEngine adoption remains follow-up work.
 
 ## Purpose
 

@@ -59,9 +59,202 @@
     {
       "name": "Infrastructure",
       "description": "Private proxy integration; not client-facing."
+    },
+    {
+      "name": "Auth",
+      "description": "Native identity, account lifecycle, external identity linking, and device sessions."
     }
   ],
   "paths": {
+    "/canopy.AuthService/RegisterPassword": {
+      "post": {
+        "summary": "Register password account",
+        "operationId": "RegisterPassword",
+        "tags": ["Auth"],
+        "description": "Creates a pending native account. Stores only password hashes and challenge-token digests; queues verification email payload after persistence. Registration throttling may return RESOURCE_EXHAUSTED.",
+        "requestBody": { "required": true, "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/RegisterPasswordRequest" } } } },
+        "responses": { "200": { "description": "Accepted.", "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/GenericAuthResponse" } } } }, "400": { "description": "INVALID_ARGUMENT" }, "409": { "description": "ALREADY_EXISTS" }, "429": { "description": "RESOURCE_EXHAUSTED" } }
+      }
+    },
+    "/canopy.AuthService/ResendVerification": {
+      "post": {
+        "summary": "Resend verification",
+        "operationId": "ResendVerification",
+        "tags": ["Auth"],
+        "description": "Rotates a pending-account verification challenge when eligible. Public response remains generic for missing, active, disabled, deleted, and throttled accounts.",
+        "requestBody": { "required": true, "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/ResendVerificationRequest" } } } },
+        "responses": { "200": { "description": "Generic accepted response.", "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/GenericAuthResponse" } } } }, "400": { "description": "INVALID_ARGUMENT" } }
+      }
+    },
+    "/canopy.AuthService/VerifyEmail": {
+      "post": {
+        "summary": "Verify email",
+        "operationId": "VerifyEmail",
+        "tags": ["Auth"],
+        "description": "Atomically consumes a single-use email verification challenge, activates the account, creates the profile, and returns access and refresh tokens.",
+        "requestBody": { "required": true, "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/VerifyEmailRequest" } } } },
+        "responses": { "200": { "description": "Activated session.", "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/AuthSessionEnvelope" } } } }, "401": { "description": "UNAUTHENTICATED" } }
+      }
+    },
+    "/canopy.AuthService/LoginPassword": {
+      "post": {
+        "summary": "Login with password",
+        "operationId": "LoginPassword",
+        "tags": ["Auth"],
+        "description": "Authenticates an active native account and creates a device session. Failed attempts are rate limited by hashed normalized email.",
+        "requestBody": { "required": true, "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/LoginPasswordRequest" } } } },
+        "responses": { "200": { "description": "Authenticated session.", "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/AuthSessionEnvelope" } } } }, "401": { "description": "UNAUTHENTICATED" }, "429": { "description": "RESOURCE_EXHAUSTED" } }
+      }
+    },
+    "/canopy.AuthService/RequestPasswordReset": {
+      "post": {
+        "summary": "Request password reset",
+        "operationId": "RequestPasswordReset",
+        "tags": ["Auth"],
+        "description": "Creates a password-reset challenge for active native accounts when eligible. Public response remains generic for missing, inactive, and throttled accounts.",
+        "requestBody": { "required": true, "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/RequestPasswordResetRequest" } } } },
+        "responses": { "200": { "description": "Generic accepted response.", "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/GenericAuthResponse" } } } }, "400": { "description": "INVALID_ARGUMENT" } }
+      }
+    },
+    "/canopy.AuthService/CompletePasswordReset": {
+      "post": {
+        "summary": "Complete password reset",
+        "operationId": "CompletePasswordReset",
+        "tags": ["Auth"],
+        "description": "Atomically consumes a reset challenge, writes the new password hash, and revokes sessions for the account.",
+        "requestBody": { "required": true, "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/CompletePasswordResetRequest" } } } },
+        "responses": { "200": { "description": "Password reset accepted.", "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/GenericAuthResponse" } } } }, "401": { "description": "UNAUTHENTICATED" } }
+      }
+    },
+    "/canopy.AuthService/ChangePassword": {
+      "post": {
+        "summary": "Change password",
+        "operationId": "ChangePassword",
+        "tags": ["Auth"],
+        "security": [{ "IdentityBearerAuth": [] }],
+        "description": "Requires native identity metadata. Rechecks the session, verifies the current password, writes the new hash, and revokes other sessions according to server policy.",
+        "requestBody": { "required": true, "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/ChangePasswordRequest" } } } },
+        "responses": { "200": { "description": "Password changed.", "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/GenericAuthResponse" } } } }, "401": { "description": "UNAUTHENTICATED" } }
+      }
+    },
+    "/canopy.AuthService/BeginGoogleLogin": {
+      "post": {
+        "summary": "Begin Google login",
+        "operationId": "BeginGoogleLogin",
+        "tags": ["Auth"],
+        "description": "Creates a one-time Google OIDC nonce challenge. The server stores only a nonce digest plus internal challenge payload.",
+        "requestBody": { "required": true, "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/BeginGoogleLoginRequest" } } } },
+        "responses": { "200": { "description": "Google nonce challenge.", "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/BeginGoogleLoginResponse" } } } } }
+      }
+    },
+    "/canopy.AuthService/CompleteGoogleLogin": {
+      "post": {
+        "summary": "Complete Google login",
+        "operationId": "CompleteGoogleLogin",
+        "tags": ["Auth"],
+        "description": "Consumes the nonce challenge, verifies the Google ID token and nonce, keys identity by Google sub, and returns either a session or explicit account-link-required challenge. Email equality alone never links accounts.",
+        "requestBody": { "required": true, "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/CompleteGoogleLoginRequest" } } } },
+        "responses": { "200": { "description": "Session or link-required result.", "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/GoogleLoginResponse" } } } }, "401": { "description": "UNAUTHENTICATED" }, "412": { "description": "FAILED_PRECONDITION when Google OIDC verification is not configured" } }
+      }
+    },
+    "/canopy.AuthService/LinkGoogle": {
+      "post": {
+        "summary": "Link Google account",
+        "operationId": "LinkGoogle",
+        "tags": ["Auth"],
+        "security": [{ "IdentityBearerAuth": [] }],
+        "description": "Requires native identity metadata and an explicit link challenge produced by CompleteGoogleLogin. The challenge is consumed atomically before attaching the Google sub.",
+        "requestBody": { "required": true, "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/LinkGoogleRequest" } } } },
+        "responses": { "200": { "description": "Linked or already linked to this account.", "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/GenericAuthResponse" } } } }, "401": { "description": "UNAUTHENTICATED" }, "412": { "description": "FAILED_PRECONDITION when the Google sub belongs to another account" } }
+      }
+    },
+    "/canopy.AuthService/UnlinkGoogle": {
+      "post": {
+        "summary": "Unlink Google account",
+        "operationId": "UnlinkGoogle",
+        "tags": ["Auth"],
+        "security": [{ "IdentityBearerAuth": [] }],
+        "description": "Requires native identity metadata. Idempotently removes the account's Google external identity.",
+        "requestBody": { "required": true, "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/UnlinkGoogleRequest" } } } },
+        "responses": { "200": { "description": "Unlinked or already absent.", "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/GenericAuthResponse" } } } }, "401": { "description": "UNAUTHENTICATED" } }
+      }
+    },
+    "/canopy.AuthService/RefreshSession": {
+      "post": {
+        "summary": "Refresh session",
+        "operationId": "RefreshSession",
+        "tags": ["Auth"],
+        "description": "Transactionally rotates a refresh token. Reuse of a consumed refresh token revokes the session family and records a hashed abuse signal.",
+        "requestBody": { "required": true, "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/RefreshSessionRequest" } } } },
+        "responses": { "200": { "description": "Rotated session tokens.", "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/AuthSessionEnvelope" } } } }, "401": { "description": "UNAUTHENTICATED" } }
+      }
+    },
+    "/canopy.AuthService/Logout": {
+      "post": {
+        "summary": "Logout current session",
+        "operationId": "Logout",
+        "tags": ["Auth"],
+        "security": [{ "IdentityBearerAuth": [] }],
+        "description": "Requires native identity metadata. Idempotently revokes the current session and consumes outstanding refresh tokens.",
+        "requestBody": { "required": true, "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/LogoutRequest" } } } },
+        "responses": { "200": { "description": "Logged out.", "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/GenericAuthResponse" } } } }, "401": { "description": "UNAUTHENTICATED" } }
+      }
+    },
+    "/canopy.AuthService/LogoutAll": {
+      "post": {
+        "summary": "Logout all sessions",
+        "operationId": "LogoutAll",
+        "tags": ["Auth"],
+        "security": [{ "IdentityBearerAuth": [] }],
+        "description": "Requires native identity metadata. Idempotently revokes all account sessions and consumes outstanding refresh tokens.",
+        "requestBody": { "required": true, "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/LogoutAllRequest" } } } },
+        "responses": { "200": { "description": "All sessions revoked.", "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/GenericAuthResponse" } } } }, "401": { "description": "UNAUTHENTICATED" } }
+      }
+    },
+    "/canopy.AuthService/ListSessions": {
+      "post": {
+        "summary": "List sessions",
+        "operationId": "ListSessions",
+        "tags": ["Auth"],
+        "security": [{ "IdentityBearerAuth": [] }],
+        "description": "Requires native identity metadata. Lists device sessions scoped to the authenticated account.",
+        "requestBody": { "required": true, "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/ListSessionsRequest" } } } },
+        "responses": { "200": { "description": "Account sessions.", "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/ListSessionsResponse" } } } }, "401": { "description": "UNAUTHENTICATED" } }
+      }
+    },
+    "/canopy.AuthService/RevokeSession": {
+      "post": {
+        "summary": "Revoke session",
+        "operationId": "RevokeSession",
+        "tags": ["Auth"],
+        "security": [{ "IdentityBearerAuth": [] }],
+        "description": "Requires native identity metadata. Idempotently revokes one account-owned session.",
+        "requestBody": { "required": true, "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/RevokeSessionRequest" } } } },
+        "responses": { "200": { "description": "Session revoked or already absent.", "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/GenericAuthResponse" } } } }, "401": { "description": "UNAUTHENTICATED" } }
+      }
+    },
+    "/canopy.AuthService/GetAccount": {
+      "post": {
+        "summary": "Get account",
+        "operationId": "GetAccount",
+        "tags": ["Auth"],
+        "security": [{ "IdentityBearerAuth": [] }],
+        "description": "Requires native identity metadata. Returns the authenticated account summary.",
+        "requestBody": { "required": true, "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/GetAccountRequest" } } } },
+        "responses": { "200": { "description": "Authenticated account.", "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/GetAccountResponse" } } } }, "401": { "description": "UNAUTHENTICATED" } }
+      }
+    },
+    "/canopy.AuthService/DeleteAccount": {
+      "post": {
+        "summary": "Delete account",
+        "operationId": "DeleteAccount",
+        "tags": ["Auth"],
+        "security": [{ "IdentityBearerAuth": [] }],
+        "description": "Requires native identity metadata. Idempotently marks the account deleted, revokes sessions immediately, and purges delegated profile-owned state according to Canopy policy.",
+        "requestBody": { "required": true, "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/DeleteAccountRequest" } } } },
+        "responses": { "200": { "description": "Account deletion accepted.", "content": { "application/protobuf": { "schema": { "$ref": "#/components/schemas/GenericAuthResponse" } } } }, "401": { "description": "UNAUTHENTICATED" } }
+      }
+    },
     "/internal/stream/authorize": {
       "get": {
         "summary": "Authorize an Nginx media subrequest",
@@ -554,7 +747,7 @@
       "post": {
         "summary": "Create or update logged-in profile",
         "operationId": "UpsertProfile",
-        "description": "Requires a real login token sent as gRPC metadata authorization: Bearer <token> or x-canopy-auth-token. The auth_token request field remains only as a compatibility fallback. Anonymous sessions are not accepted and do not create durable backend state.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions are not accepted and do not create durable backend state.",
         "requestBody": {
           "required": true,
           "content": {
@@ -594,7 +787,7 @@
       "post": {
         "summary": "Record logged-in playback history",
         "operationId": "RecordPlaybackHistory",
-        "description": "Requires a real login token sent as gRPC metadata authorization: Bearer <token> or x-canopy-auth-token, plus an existing profile. The auth_token request field remains only as a compatibility fallback. Anonymous sessions are not accepted and never create backend history.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions are not accepted and never create backend history.",
         "requestBody": {
           "required": true,
           "content": {
@@ -634,7 +827,7 @@
       "post": {
         "summary": "Save track to logged-in library",
         "operationId": "SaveLibraryItem",
-        "description": "Requires gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions are not accepted and never create backend durable state.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions are not accepted and never create backend durable state.",
         "requestBody": {
           "required": true,
           "content": {
@@ -674,7 +867,7 @@
       "post": {
         "summary": "Remove track from logged-in library",
         "operationId": "RemoveLibraryItem",
-        "description": "Requires gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions are not accepted and never create backend durable state. Removing an absent item is idempotent and still succeeds.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions are not accepted and never create backend durable state. Removing an absent item is idempotent and still succeeds.",
         "requestBody": {
           "required": true,
           "content": {
@@ -754,7 +947,7 @@
       "post": {
         "summary": "Like track for logged-in profile",
         "operationId": "LikeTrack",
-        "description": "Requires gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions are not accepted and never create backend durable state.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions are not accepted and never create backend durable state.",
         "requestBody": {
           "required": true,
           "content": {
@@ -794,7 +987,7 @@
       "post": {
         "summary": "Unlike track for logged-in profile",
         "operationId": "UnlikeTrack",
-        "description": "Requires gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions are not accepted and never create backend durable state. Removing an absent like is idempotent and still succeeds.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions are not accepted and never create backend durable state. Removing an absent like is idempotent and still succeeds.",
         "requestBody": {
           "required": true,
           "content": {
@@ -874,7 +1067,7 @@
       "post": {
         "summary": "Get logged-in profile preferences",
         "operationId": "GetPreferences",
-        "description": "Requires gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions are not accepted and never create backend durable state. Missing preferences return an empty JSON object.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions are not accepted and never create backend durable state. Missing preferences return an empty JSON object.",
         "requestBody": {
           "required": true,
           "content": {
@@ -914,7 +1107,7 @@
       "post": {
         "summary": "Update logged-in profile preferences",
         "operationId": "UpdatePreferences",
-        "description": "Requires gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions are not accepted and never create backend durable state. preferences_json must be a JSON object string.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions are not accepted and never create backend durable state. preferences_json must be a JSON object string.",
         "requestBody": {
           "required": true,
           "content": {
@@ -954,7 +1147,7 @@
       "post": {
         "summary": "Create private playlist",
         "operationId": "CreatePlaylist",
-        "description": "Requires an existing logged-in profile and gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions are not accepted and never create playlist state. Creates a private playlist owned by profiles.id.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions are not accepted and never create playlist state. Creates a private playlist owned by profiles.id.",
         "security": [
           {
             "BearerAuth": []
@@ -994,7 +1187,7 @@
       "post": {
         "summary": "Update private playlist",
         "operationId": "UpdatePlaylist",
-        "description": "Requires an existing logged-in profile and gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions are not accepted and never create playlist state. Cross-profile and unknown playlist identifiers return not found.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions are not accepted and never create playlist state. Cross-profile and unknown playlist identifiers return not found.",
         "security": [
           {
             "BearerAuth": []
@@ -1034,7 +1227,7 @@
       "post": {
         "summary": "Delete private playlist",
         "operationId": "DeletePlaylist",
-        "description": "Requires an existing logged-in profile and gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions are not accepted and never create playlist state. Deletes the playlist and its ordered track memberships.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions are not accepted and never create playlist state. Deletes the playlist and its ordered track memberships.",
         "security": [
           {
             "BearerAuth": []
@@ -1074,7 +1267,7 @@
       "post": {
         "summary": "List private playlists",
         "operationId": "ListPlaylists",
-        "description": "Requires an existing logged-in profile and gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions are not accepted and never create playlist state. Returns only playlists owned by the authenticated profile.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions are not accepted and never create playlist state. Returns only playlists owned by the authenticated profile.",
         "security": [
           {
             "BearerAuth": []
@@ -1154,7 +1347,7 @@
       "post": {
         "summary": "Remove track from private playlist",
         "operationId": "RemovePlaylistTrack",
-        "description": "Requires an existing logged-in profile and gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions are not accepted and never create playlist state. Removing a track that is not a member succeeds.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions are not accepted and never create playlist state. Removing a track that is not a member succeeds.",
         "security": [
           {
             "BearerAuth": []
@@ -1274,7 +1467,7 @@
       "post": {
         "summary": "List profile playback history",
         "operationId": "ListPlaybackHistory",
-        "description": "Requires an existing logged-in profile and gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions cannot access backend history. Returns repeated playback events newest first. limit=0 defaults to 50 and values above 100 are clamped.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions cannot access backend history. Returns repeated playback events newest first. limit=0 defaults to 50 and values above 100 are clamped.",
         "security": [
           {
             "BearerAuth": []
@@ -1314,7 +1507,7 @@
       "post": {
         "summary": "Delete one playback history event",
         "operationId": "DeletePlaybackHistoryEntry",
-        "description": "Requires an existing logged-in profile and gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions cannot access backend history. Deletion is idempotent and ownership-safe; unknown and cross-profile IDs return deleted=false.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions cannot access backend history. Deletion is idempotent and ownership-safe; unknown and cross-profile IDs return deleted=false.",
         "security": [
           {
             "BearerAuth": []
@@ -1354,7 +1547,7 @@
       "post": {
         "summary": "Clear all profile playback history",
         "operationId": "ClearPlaybackHistory",
-        "description": "Requires an existing logged-in profile and gRPC metadata auth using authorization: Bearer <token> or x-canopy-auth-token. Anonymous sessions cannot access backend history. Permanently deletes every event owned by the authenticated profile and returns the deleted count.",
+        "description": "Requires native identity metadata authorization: Bearer <identity access token> and an existing profile. Anonymous sessions cannot access backend history. Permanently deletes every event owned by the authenticated profile and returns the deleted count.",
         "security": [
           {
             "BearerAuth": []
@@ -1826,7 +2019,7 @@
         "properties": {
           "auth_token": {
             "type": "string",
-            "description": "Deprecated fallback token field; prefer gRPC metadata authorization: Bearer <token> or x-canopy-auth-token."
+            "description": "Deprecated legacy token field; native-identity durable RPCs ignore this field and require authorization: Bearer <identity access token> metadata."
           },
           "display_name": {
             "type": "string"
@@ -1867,7 +2060,7 @@
         "properties": {
           "auth_token": {
             "type": "string",
-            "description": "Deprecated fallback token field; prefer gRPC metadata authorization: Bearer <token> or x-canopy-auth-token."
+            "description": "Deprecated legacy token field; native-identity durable RPCs ignore this field and require authorization: Bearer <identity access token> metadata."
           },
           "track_id": {
             "type": "string",
@@ -2473,6 +2666,33 @@
           }
         }
       },
+      "RegisterPasswordRequest": { "type": "object", "required": ["email", "password"], "properties": { "email": { "type": "string", "format": "email" }, "password": { "type": "string", "format": "password" } } },
+      "ResendVerificationRequest": { "type": "object", "required": ["email"], "properties": { "email": { "type": "string", "format": "email" } } },
+      "VerifyEmailRequest": { "type": "object", "required": ["verification_token", "device_label"], "properties": { "verification_token": { "type": "string", "description": "Opaque email-verification token." }, "device_label": { "type": "string" } } },
+      "LoginPasswordRequest": { "type": "object", "required": ["email", "password", "device_label"], "properties": { "email": { "type": "string", "format": "email" }, "password": { "type": "string", "format": "password" }, "device_label": { "type": "string" } } },
+      "RequestPasswordResetRequest": { "type": "object", "required": ["email"], "properties": { "email": { "type": "string", "format": "email" } } },
+      "CompletePasswordResetRequest": { "type": "object", "required": ["reset_token", "new_password"], "properties": { "reset_token": { "type": "string", "description": "Opaque password-reset token." }, "new_password": { "type": "string", "format": "password" } } },
+      "ChangePasswordRequest": { "type": "object", "required": ["current_password", "new_password"], "properties": { "current_password": { "type": "string", "format": "password" }, "new_password": { "type": "string", "format": "password" } } },
+      "BeginGoogleLoginRequest": { "type": "object", "description": "Empty request." },
+      "BeginGoogleLoginResponse": { "type": "object", "properties": { "challenge_id": { "type": "string" }, "nonce": { "type": "string" }, "expires_at": { "type": "string", "format": "date-time" } } },
+      "CompleteGoogleLoginRequest": { "type": "object", "required": ["challenge_id", "id_token", "device_label"], "properties": { "challenge_id": { "type": "string" }, "id_token": { "type": "string", "description": "Google OIDC ID token; never log or persist." }, "device_label": { "type": "string" } } },
+      "AccountLinkRequired": { "type": "object", "properties": { "link_challenge_id": { "type": "string", "description": "Opaque explicit-link challenge token." } } },
+      "GoogleLoginResponse": { "type": "object", "description": "Protobuf oneof: either session or account_link_required is set.", "properties": { "session": { "$ref": "#/components/schemas/AuthSessionEnvelope" }, "account_link_required": { "$ref": "#/components/schemas/AccountLinkRequired" } } },
+      "LinkGoogleRequest": { "type": "object", "required": ["link_challenge_id"], "properties": { "link_challenge_id": { "type": "string" } } },
+      "UnlinkGoogleRequest": { "type": "object", "description": "Empty request." },
+      "RefreshSessionRequest": { "type": "object", "required": ["refresh_token"], "properties": { "refresh_token": { "type": "string", "description": "Opaque refresh token; never log or persist raw." } } },
+      "LogoutRequest": { "type": "object", "description": "Empty request." },
+      "LogoutAllRequest": { "type": "object", "description": "Empty request." },
+      "ListSessionsRequest": { "type": "object", "properties": { "page": { "$ref": "#/components/schemas/PageRequest" } } },
+      "RevokeSessionRequest": { "type": "object", "required": ["session_id"], "properties": { "session_id": { "type": "string" } } },
+      "GetAccountRequest": { "type": "object", "description": "Empty request." },
+      "DeleteAccountRequest": { "type": "object", "description": "Empty request." },
+      "GenericAuthResponse": { "type": "object", "properties": { "accepted": { "type": "boolean" } } },
+      "AccountSummary": { "type": "object", "properties": { "account_id": { "type": "string" }, "status": { "type": "string" }, "primary_email": { "type": "string", "format": "email" }, "created_at": { "type": "string", "format": "date-time" } } },
+      "AuthSessionSummary": { "type": "object", "properties": { "session_id": { "type": "string" }, "device_label": { "type": "string" }, "expires_at": { "type": "string", "format": "date-time" }, "revoked_at": { "type": "string", "format": "date-time", "nullable": true } } },
+      "AuthSessionEnvelope": { "type": "object", "properties": { "account": { "$ref": "#/components/schemas/AccountSummary" }, "session": { "$ref": "#/components/schemas/AuthSessionSummary" }, "access_token": { "type": "string", "description": "Native identity access token." }, "refresh_token": { "type": "string", "description": "Opaque refresh token returned only on session-issuing AuthService successes." } } },
+      "ListSessionsResponse": { "type": "object", "properties": { "sessions": { "type": "array", "items": { "$ref": "#/components/schemas/AuthSessionSummary" } }, "page_info": { "$ref": "#/components/schemas/PageInfo" } } },
+      "GetAccountResponse": { "type": "object", "properties": { "account": { "$ref": "#/components/schemas/AccountSummary" } } },
       "Empty": {
         "type": "object",
         "description": "google.protobuf.Empty"
@@ -2482,13 +2702,18 @@
       "BearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "Verified end-user token sent as authorization: Bearer <token> gRPC metadata."
+        "description": "Legacy end-user token metadata retained only where explicitly documented. Durable user-state RPCs use IdentityBearerAuth."
+      },
+      "IdentityBearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Native identity access token sent as authorization: Bearer <identity access token> gRPC metadata."
       },
       "CanopyToken": {
         "type": "apiKey",
         "in": "header",
         "name": "x-canopy-auth-token",
-        "description": "Direct gRPC metadata token for clients that cannot set authorization metadata."
+        "description": "Legacy direct token metadata retained only where explicitly documented. Durable user-state RPCs use IdentityBearerAuth."
       }
     }
   },
@@ -2497,10 +2722,10 @@
     "sessionControlStatus": "PandaEngine owns playback control and queue/session state. Canonical canopy.v1 playback RPCs resolve authorized playback sources only; prototype session-control projections are noncanonical legacy documentation until the companion is fully regenerated.",
     "providerFixtureStartup": "Set CANOPY_PROVIDER_FIXTURE_PATH in PostgreSQL mode to ingest a local ProviderTrack fixture before serving gRPC.",
     "healthStatus": "Health responses include aggregate status plus dependency details. PostgreSQL and managed local media are the active readiness dependencies.",
-    "authModel": "Anonymous users may browse, search, and play, but anonymous sessions are not durable users and receive no backend history, library, likes, preferences, playlists, or durable sessions. Durable state RPCs in the bounded canopy.v1 services require native identity metadata authorization: Bearer <identity access token>; Canopy verifies the Ed25519 access token and rechecks session state before resolving profiles. Auth abuse controls use hashed fixed-window buckets; registration and password-login throttles may surface RESOURCE_EXHAUSTED, while generic verification-resend and password-reset requests remain accepted when throttled.",
+    "authModel": "Anonymous users may browse, search, and play, but anonymous sessions are not durable users and receive no backend history, library, likes, preferences, playlists, or durable sessions. AuthService owns native identity, password reset/change, Google login/linking, account lifecycle, and device sessions. Durable state RPCs in the bounded canopy.v1 services require native identity metadata authorization: Bearer <identity access token>; Canopy verifies the Ed25519 access token and rechecks session state before resolving profiles. Auth abuse controls use hashed fixed-window buckets; registration and password-login throttles may surface RESOURCE_EXHAUSTED, while generic verification-resend and password-reset requests remain accepted when throttled.",
     "playbackResolution": "ResolvePlayback accepts track_id, optional session_id, and optional gRPC auth metadata. The configured owner receives owner-scoped personal media first with public fallback; anonymous and non-owner callers receive release-safe public media only. Invalid supplied auth is rejected, inaccessible personal media is concealed as not found, and successful resolution loads the track into the session.",
     "storageModel": "Active playback uses Canopy-managed local media authorized by Canopy and served through Nginx. No external catalog or object-storage provider is wired into the runtime; RustFS remains optional Compose infrastructure only.",
-    "profileStatus": "UpsertProfile verifies metadata auth, upserts profiles(external_user_id), and stores history_enabled as the logged-in user history preference.",
+    "profileStatus": "UpsertProfile requires native identity metadata, resolves the authenticated account/profile scope, and stores history_enabled as the logged-in user history preference.",
     "historyStatus": "Playback history is an append-only profile-owned event ledger. Lifecycle RPCs require metadata auth. Disabling history atomically and irreversibly purges existing events, and consent-safe recording prevents concurrent repopulation. Anonymous sessions never create or read backend history.",
     "libraryStatus": "Library RPCs require native identity metadata auth and persist profile-owned saved tracks only for logged-in users. Saved-track list resources include TrackSummary plus saved_at relationship metadata.",
     "likesStatus": "Like RPCs require native identity metadata auth and persist profile-owned positive track likes only for logged-in users. Liked-track list resources include TrackSummary plus liked_at relationship metadata.",

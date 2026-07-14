@@ -1,20 +1,19 @@
 # Canopy API
 
-Canonical protobuf contract for Canopy and PandaEngine.
+Product-neutral protobuf contract published as `canopy.v1`.
 
-- `proto/canopy/v1/canopy.proto` is authoritative.
-- `openapi/openapi.json` is a noncanonical documentation companion.
-- Backward-compatible changes remain in `canopy.v1`.
-- Breaking redesigns use a new protobuf package version.
+## Contract
 
+- Canonical source: `proto/canopy/v1/canopy.proto`
+- Private BSR module: `buf.build/pandawave/canopy-api`
+- Current stable release: `v0.2.0`
+- Immutable stable commit: `145678c1d73e45b7bbaebf7e16ee4d64`
+- Consumer setup: `docs/consumer-guide.md`
+- Compatibility policy: `docs/compatibility.md`
 
-## Implementation Status
-
-Canopy currently consumes this contract through the generated BSR SDK. Native email/password registration, email verification, password login, refresh-token rotation, password reset/change, verification resend, account lookup/deletion, session listing/revocation, Google login/linking, and durable profile/history/library/likes/preferences/playlist RPC authentication are implemented or wired in Canopy. Google ID-token verification is enabled in PostgreSQL mode when Canopy is configured with accepted Google OAuth client IDs; otherwise Google login fails closed. Full downstream PandaEngine adoption remains follow-up work. Auth abuse controls now throttle repeated registration/login/resend/reset attempts and record refresh-token reuse signals without storing raw subjects.
-
-Canopy now supervises TLS-only SMTP delivery for committed authentication outbox rows. Verification and password-reset payloads remain authenticated-encrypted at rest, are leased for at-least-once delivery with deterministic message IDs, and have ciphertext cleared after success. SMTP availability participates in Canopy readiness without changing this protobuf contract.
-
-Collection resource shapes in `canopy.v1` are canonical: saved-track, liked-track, and playlist-track list responses carry renderable track summaries plus relationship metadata such as `saved_at`, `liked_at`, `position`, and `added_at`.
+Protobuf and BSR documentation are authoritative. Consumers pin immutable
+generated SDK versions and treat server endpoints and deployment configuration
+as implementation-provided settings.
 
 ## Validate
 
@@ -22,8 +21,10 @@ Collection resource shapes in `canopy.v1` are canonical: saved-track, liked-trac
 buf format --diff --exit-code
 buf lint
 buf build
+bash scripts/check-contract-boundary.sh
 ```
 
-## Publish
+## Releases
 
-The private BSR module is `buf.build/pandawave/canopy-api`. Publication requires an authenticated Buf account with access to the `pandawave` organization.
+Backward-compatible changes remain in `canopy.v1`. Breaking redesigns use a
+new protobuf package version. See `CHANGELOG.md` and `docs/compatibility.md`.

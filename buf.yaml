@@ -5,10 +5,12 @@ modules:
 lint:
   use:
     - STANDARD
+    - COMMENTS
   # Resource-oriented RPCs return canonical resources or google.protobuf.Empty.
   except:
     - RPC_REQUEST_RESPONSE_UNIQUE
     - RPC_RESPONSE_STANDARD_NAME
+  disallow_comment_ignores: true
 breaking:
   use:
     - FILE

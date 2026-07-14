@@ -1,0 +1,71 @@
+name: Buf CI
+
+on:
+  push:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  delete:
+
+permissions:
+  contents: read
+
+jobs:
+  documentation-boundary:
+    if: github.event_name != 'delete'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/check-contract-boundary.sh
+
+  contract:
+    if: github.event_name != 'delete'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install checksum-pinned Buf CLI
+        run: bash scripts/install-buf.sh
+      - name: Check format, lint, and build
+        run: |
+          buf format --diff --exit-code
+          buf lint
+          buf build
+      - name: Check compatibility against the pull-request base
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: buf breaking --against ".git#ref=origin/${BASE_REF}"
+
+  publish:
+    if: github.event_name == 'push'
+    needs: [documentation-boundary, contract]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install checksum-pinned Buf CLI
+        run: bash scripts/install-buf.sh
+      - name: Check stable compatibility and publish named modules
+        env:
+          BUF_TOKEN: ${{ secrets.BUF_TOKEN }}
+        run: |
+          test -n "${BUF_TOKEN}"
+          buf breaking --against buf.build/pandawave/canopy-api:v0.2.0
+          buf push --git-metadata
+
+  archive-deleted-label:
+    if: github.event_name == 'delete'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install checksum-pinned Buf CLI
+        run: bash scripts/install-buf.sh
+      - name: Archive the deleted Git ref label
+        env:
+          BUF_TOKEN: ${{ secrets.BUF_TOKEN }}
+          DELETED_REF: ${{ github.event.ref }}
+        run: |
+          test -n "${BUF_TOKEN}"
+          buf registry module label archive "buf.build/pandawave/canopy-api:${DELETED_REF}"

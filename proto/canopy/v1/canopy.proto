@@ -661,7 +661,7 @@ message SessionEnvelope {
 message RegisterPasswordRequest {
   // Email address used for native account authentication.
   string email = 1;
-  // Password credential for the native account.
+  // New password credential containing 8 through 64 Unicode scalar values.
   string password = 2;
 }
 
@@ -683,7 +683,8 @@ message VerifyEmailRequest {
 message LoginPasswordRequest {
   // Email address used for native account authentication.
   string email = 1;
-  // Password credential for the native account.
+  // Existing non-empty password credential. Consumers must not apply the new
+  // password creation-length policy when logging in.
   string password = 2;
   // Consumer-supplied label used to recognize a device session.
   string device_label = 3;
@@ -699,15 +700,15 @@ message RequestPasswordResetRequest {
 message CompletePasswordResetRequest {
   // Opaque out-of-band password-reset token passed through unchanged.
   string reset_token = 1;
-  // Replacement password credential for the native account.
+  // Replacement password credential containing 8 through 64 Unicode scalar values.
   string new_password = 2;
 }
 
 // ChangePasswordRequest supplies parameters for its corresponding RPC.
 message ChangePasswordRequest {
-  // Current password credential used to authorize the change.
+  // Existing non-empty password credential used to authorize the change.
   string current_password = 1;
-  // Replacement password credential for the native account.
+  // Replacement password credential containing 8 through 64 Unicode scalar values.
   string new_password = 2;
 }
 

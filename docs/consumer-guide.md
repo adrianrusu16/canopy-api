@@ -81,6 +81,23 @@ the authenticated current session active while invalidating the account's
 other sessions. Logout and session revocation are safe to treat as idempotent
 from the consumer's point of view.
 
+## Authentication Input Policy
+
+- New and replacement passwords contain 8 through 64 Unicode scalar values.
+- Login and current-password fields accept an existing non-empty credential;
+  consumers must not apply the creation bounds to credentials created under an
+  earlier policy.
+- Email input is trimmed and compared case-insensitively. It contains exactly
+  one `@`, a common ASCII local part with no leading, trailing, or repeated dot,
+  and DNS-style domain labels with no leading or trailing hyphen. The full
+  address is at most 254 UTF-8 bytes, the local part at most 64 bytes, the
+  domain at most 253 bytes, and each domain label at most 63 bytes.
+- Treat `INVALID_ARGUMENT` as a field or policy rejection, but never parse the
+  backend message to decide application behavior.
+- Bound client call duration and allow only explicit, operation-aware retries.
+  Never automatically replay an account-creation, login, password-change,
+  password-reset, or refresh request after an ambiguous transport result.
+
 ## Google Login And Linking
 
 1. Call `BeginGoogleLogin`.

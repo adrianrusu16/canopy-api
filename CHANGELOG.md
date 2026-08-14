@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add independent `GetForYouFeed` and `GetRecommendations` RPCs that initially mirror discovery without changing existing wire shapes.
 - Separate product-neutral contract guidance from implementation and consumer documentation.
 - Add a complete consumer guide, compatibility policy, ownership guard, and generated-documentation linting.
 

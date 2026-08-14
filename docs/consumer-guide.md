@@ -52,6 +52,14 @@ Absent authorization metadata is anonymous only on anonymous-capable RPCs.
 Malformed or invalid supplied metadata returns `UNAUTHENTICATED`; it never
 downgrades the request to anonymous access.
 
+## Discovery-family feeds
+
+`GetDiscoveryFeed`, `GetForYouFeed`, and `GetRecommendations` are
+anonymous-capable, use opaque pagination, and accept best-effort track
+exclusions. The initial `For You` and recommendations responses intentionally
+use the same ordering as discovery; consumers must not infer personalized
+ranking until a later contract note says it is available.
+
 ## Service Authorization
 
 | Surface | Authorization |

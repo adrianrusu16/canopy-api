@@ -25,11 +25,16 @@ service PlaybackService {
   rpc ResolvePlayback(ResolvePlaybackRequest) returns (PlaybackSource);
 }
 
-// Batched discovery feeds. Recommendations can be added compatibly in v1.
+// Batched discovery-family feeds.
 // Calls accept anonymous access, return batched opaque pagination, and apply requested track exclusions on a best-effort basis.
+// GetForYouFeed and GetRecommendations initially share GetDiscoveryFeed ordering.
 service DiscoveryService {
   // GetDiscoveryFeed returns a batched paginated feed and excludes requested track identifiers on a best-effort basis.
   rpc GetDiscoveryFeed(GetDiscoveryFeedRequest) returns (GetDiscoveryFeedResponse);
+  // GetForYouFeed returns the current discovery feed through a stable endpoint reserved for future personalization.
+  rpc GetForYouFeed(GetForYouFeedRequest) returns (GetForYouFeedResponse);
+  // GetRecommendations returns the current discovery feed through a stable endpoint reserved for future recommendation ranking.
+  rpc GetRecommendations(GetRecommendationsRequest) returns (GetRecommendationsResponse);
 }
 
 // Logged-in profile lifecycle and ordinary UI preferences.
@@ -288,6 +293,38 @@ message GetDiscoveryFeedRequest {
 
 // GetDiscoveryFeedResponse contains results from its corresponding RPC.
 message GetDiscoveryFeedResponse {
+  // Ordered renderable track resources in this result page.
+  repeated TrackSummary tracks = 1;
+  // Opaque pagination continuation information.
+  PageInfo page_info = 2;
+}
+
+// GetForYouFeedRequest supplies parameters for its corresponding RPC.
+message GetForYouFeedRequest {
+  // Opaque track identifiers to exclude from the feed on a best-effort basis.
+  repeated string exclude_track_ids = 1;
+  // Opaque pagination parameters; zero and empty values select service defaults.
+  PageRequest page = 2;
+}
+
+// GetForYouFeedResponse contains results from its corresponding RPC.
+message GetForYouFeedResponse {
+  // Ordered renderable track resources in this result page.
+  repeated TrackSummary tracks = 1;
+  // Opaque pagination continuation information.
+  PageInfo page_info = 2;
+}
+
+// GetRecommendationsRequest supplies parameters for its corresponding RPC.
+message GetRecommendationsRequest {
+  // Opaque track identifiers to exclude from the feed on a best-effort basis.
+  repeated string exclude_track_ids = 1;
+  // Opaque pagination parameters; zero and empty values select service defaults.
+  PageRequest page = 2;
+}
+
+// GetRecommendationsResponse contains results from its corresponding RPC.
+message GetRecommendationsResponse {
   // Ordered renderable track resources in this result page.
   repeated TrackSummary tracks = 1;
   // Opaque pagination continuation information.

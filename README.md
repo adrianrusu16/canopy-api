@@ -10,7 +10,7 @@ the Buf Schema Registry (BSR) as a private module.
 | --- | --- |
 | Canonical schema | [`proto/canopy/v1/canopy.proto`](proto/canopy/v1/canopy.proto) |
 | BSR module | `buf.build/pandawave/canopy-api` |
-| Stable release | `v0.2.0` (`145678c1d73e45b7bbaebf7e16ee4d64`) |
+| Stable release | `v0.3.0` (`ff8940d1a15b4034bb430fd47dd45cdc`) |
 | Consumer integration | [`docs/consumer-guide.md`](docs/consumer-guide.md) |
 | Compatibility rules | [`docs/compatibility.md`](docs/compatibility.md) |
 | Release history | [`CHANGELOG.md`](CHANGELOG.md) |

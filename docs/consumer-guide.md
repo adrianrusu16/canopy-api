@@ -9,8 +9,8 @@ configuration.
 
 - Canonical source: `proto/canopy/v1/canopy.proto`.
 - BSR module: `buf.build/pandawave/canopy-api`.
-- Current stable release: `v0.2.0`.
-- Immutable stable commit: `145678c1d73e45b7bbaebf7e16ee4d64`.
+- Current stable release: `v0.3.0`.
+- Immutable stable commit: `ff8940d1a15b4034bb430fd47dd45cdc`.
 - BSR hosts versioned schema documentation and generated SDKs.
 - OpenAPI is not used to generate gRPC clients.
 
@@ -34,8 +34,8 @@ Pin generated packages to immutable versions:
 
 ```toml
 [dependencies]
-canopy-api-prost = { package = "pandawave_canopy-api_community_neoeinstein-prost", version = "=0.5.0-00000000000000-145678c1d73e.2", registry = "buf" }
-canopy-api-tonic = { package = "pandawave_canopy-api_community_neoeinstein-tonic", version = "=0.5.0-00000000000000-145678c1d73e.4", registry = "buf" }
+canopy-api-prost = { package = "pandawave_canopy-api_community_neoeinstein-prost", version = "=0.5.0-00000000000000-ff8940d1a15b.2", registry = "buf" }
+canopy-api-tonic = { package = "pandawave_canopy-api_community_neoeinstein-tonic", version = "=0.5.0-00000000000000-ff8940d1a15b.4", registry = "buf" }
 tonic = { version = "0.14.6", features = ["transport"] }
 ```
 

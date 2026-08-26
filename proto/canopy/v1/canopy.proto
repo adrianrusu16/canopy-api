@@ -174,9 +174,17 @@ message PageInfo {
 }
 
 // ArtworkRef identifies artwork without prescribing a client URI.
+// Clients must treat both fields as opaque. Servers must not embed platform
+// URI schemes, filesystem paths, object-storage keys, or CDN hostnames here.
+// Display URLs are derived by the consumer from its configured media origin
+// plus these fields (for example `/artwork/{id}/{content_hash}`).
 message ArtworkRef {
-  // Opaque stable identifier for this resource.
+  // Opaque stable identifier for this artwork resource. Remains stable when
+  // artwork bytes are replaced for the same resource.
   string id = 1;
+  // Lowercase SHA-256 hex digest of the artwork bytes. Changes whenever the
+  // bytes behind `id` are replaced and is the client cache / URL version key.
+  string content_hash = 2;
 }
 
 // ArtistSummary is the renderable artist metadata embedded in track resources.

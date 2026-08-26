@@ -154,6 +154,14 @@ Use bounded backoff and avoid retrying non-idempotent operations blindly.
 - Optional fields distinguish absence from a scalar or message default.
 - `PlaybackSource.stream_url` is opaque and usable verbatim only until `expires_at`.
 - `PlaybackSource` format, bitrate, and content type describe the selected playback asset.
+- `ArtworkRef.id` is an opaque stable artwork resource identifier. It must not be
+  treated as a loadable URI, filesystem path, or object-storage key.
+- `ArtworkRef.content_hash` is the lowercase SHA-256 hex digest of the artwork
+  bytes and is the content-version / cache key. When bytes behind the same
+  artwork id are replaced, `id` stays stable and `content_hash` changes.
+- Consumers derive artwork display URLs from their configured media origin plus
+  `ArtworkRef` (for example `/artwork/{id}/{content_hash}`). The contract never
+  embeds platform URI schemes or CDN hostnames in artwork fields.
 - Saved, liked, and playlist-track list entries include renderable track data plus relationship metadata.
 - Playlist reorder sends the complete ordered membership and `expected_revision`.
 - A playlist reorder returning `ABORTED` means refetch, reconcile, and submit a new complete order.

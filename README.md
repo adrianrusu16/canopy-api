@@ -1,13 +1,41 @@
-# Canopy API
+<div align="center">
 
-The product-neutral, versioned protobuf contract for Canopy clients and server
-implementations. The current public package is `canopy.v1` and is published to
-the Buf Schema Registry (BSR) as a private module.
+# 🔌 canopy-api
 
-## Contract at a glance
+### One versioned wire contract. Independent client and server evolution.
+
+[![Protobuf](https://img.shields.io/badge/Protocol_Buffers-canopy.v1-4285F4?style=flat-square)](proto/canopy/v1/canopy.proto)
+[![gRPC](https://img.shields.io/badge/gRPC-contract-244C5A?style=flat-square)](https://grpc.io/)
+[![Buf](https://img.shields.io/badge/Buf-lint_%C2%B7_build_%C2%B7_breaking-0C65EC?style=flat-square)](https://buf.build/)
+[![CI](https://github.com/adrianrusu16/canopy-api/actions/workflows/buf-ci.yml/badge.svg)](https://github.com/adrianrusu16/canopy-api/actions/workflows/buf-ci.yml)
+
+[Case study](https://adrianrusu.dev/projects/canopy-api/) ·
+[Consumer guide](docs/consumer-guide.md) ·
+[Compatibility](docs/compatibility.md) ·
+[Changelog](CHANGELOG.md)
+
+</div>
+
+---
+
+**canopy-api** is the public, product-neutral Protobuf/gRPC source contract shared by PandaEngine and Canopy.
+
+The current API package is:
+
+```text
+canopy.v1
+```
+
+The repository defines **wire shape and shared semantics**. Backend deployment, transport configuration, UI behavior and implementation-specific policy remain in their owning repositories.
+
+> **Generated interfaces guarantee shape. Compatibility policy preserves the agreement around that shape.**
+
+---
+
+## 🧭 Contract at a glance
 
 | Item | Location |
-| --- | --- |
+|---|---|
 | Canonical schema | [`proto/canopy/v1/canopy.proto`](proto/canopy/v1/canopy.proto) |
 | BSR module | `buf.build/pandawave/canopy-api` |
 | Stable release | `v0.3.0` (`ff8940d1a15b4034bb430fd47dd45cdc`) |
@@ -15,48 +43,67 @@ the Buf Schema Registry (BSR) as a private module.
 | Compatibility rules | [`docs/compatibility.md`](docs/compatibility.md) |
 | Release history | [`CHANGELOG.md`](CHANGELOG.md) |
 
-The protobuf source and its BSR documentation are authoritative. This
-repository defines wire shapes and their product-neutral semantics; server
-endpoints, transport security, deployment settings, delivery channels, and UI
-behavior belong to the implementation or its consumers.
+The source repository is public. The current BSR module / generated package distribution may require configured access as documented by the consumer guide.
 
-## Service surface
+---
 
-| Service | Purpose | Access |
-| --- | --- | --- |
-| `CatalogService` | Browse, search, and retrieve catalog metadata. | Anonymous-capable |
-| `PlaybackService` | Resolve an opaque, expiring playback source. | Anonymous-capable |
-| `DiscoveryService` | Get discovery, For You, and recommendations feeds. The latter two currently retain discovery ordering. | Anonymous-capable |
-| `ProfileService` | Create, read, update, and delete a profile; manage preferences. | Authenticated profile |
-| `HistoryService` | Manage playback-history consent and entries. Disabling history purges it. | Authenticated profile |
-| `LibraryService` | Manage saved tracks and likes. | Authenticated profile |
-| `PlaylistService` | Manage playlists and their ordered track membership. | Authenticated profile |
-| `AuthService` | Manage credentials, email verification, Google identity, sessions, and account lifecycle. | Bootstrap and authenticated methods |
-| `SystemService` | Retrieve application and dependency status. | Public |
+## 🧩 Service surface
 
-Anonymous-capable RPCs may receive bearer metadata. Invalid supplied metadata
-returns `UNAUTHENTICATED`; it never falls back to anonymous access. Protected
-calls require lowercase `authorization` metadata containing
-`Bearer <access-token>`. See the [consumer guide](docs/consumer-guide.md) for
-the per-method authorization table, session lifecycle, input policy, error
-handling, and a Tonic example.
+| Service | Responsibility | Access |
+|---|---|---|
+| `CatalogService` | browse, search and catalog metadata | anonymous-capable |
+| `PlaybackService` | resolve an opaque expiring playback source | anonymous-capable |
+| `DiscoveryService` | discovery / For You / recommendation feeds | anonymous-capable |
+| `ProfileService` | profile lifecycle and preferences | authenticated profile |
+| `HistoryService` | history consent and playback history | authenticated profile |
+| `LibraryService` | saved tracks and likes | authenticated profile |
+| `PlaylistService` | playlists and ordered membership | authenticated profile |
+| `AuthService` | credentials, verification, provider identity and sessions | bootstrap + authenticated methods |
+| `SystemService` | application/dependency status | public |
 
-## Use the generated SDKs
+---
 
-The BSR publishes generated SDKs. Consumers should discover releases by label,
-but pin the generated packages to exact immutable versions so that builds do
-not change when a label moves. For the private Buf Cargo registry setup and
-current Rust package coordinates, follow the
-[consumer guide](docs/consumer-guide.md#rust-sdk-setup).
+## 🔐 Fail-closed identity semantics
 
-Consumers treat page tokens, identifiers, and playback URLs as opaque;
-preserve unknown protobuf fields and preference keys. Branch on canonical gRPC
-status codes rather than backend message text.
+Optional authentication is **not** permission to ignore bad authentication.
 
-## Development
+| Request state | Contract interpretation |
+|---|---|
+| No identity on an anonymous-capable RPC | apply anonymous policy |
+| Valid bearer identity | apply authenticated context |
+| Supplied invalid / expired / revoked identity | return `UNAUTHENTICATED` |
 
-Install a compatible [Buf CLI](https://buf.build/docs/installation/) and run
-the complete local contract check before opening a pull request:
+This distinction is part of the shared API semantics so that consumers and implementations cannot silently disagree about authentication failure.
+
+---
+
+## 📦 Generated SDKs & immutable pins
+
+The Buf Schema Registry publishes generated SDKs from this contract.
+
+Consumers should discover releases by label if useful, but builds should pin generated packages to immutable revisions rather than following a mutable branch/tag-like reference.
+
+```mermaid
+flowchart LR
+    Change["Contract change"]
+    Check["Buf format / lint / build"]
+    Breaking["Breaking-change gate"]
+    SDK["Generated immutable SDK"]
+    Client["PandaEngine"]
+    Server["Canopy"]
+
+    Change --> Check --> Breaking --> SDK
+    SDK --> Client
+    SDK --> Server
+```
+
+For the current Rust setup and package coordinates, follow [`docs/consumer-guide.md`](docs/consumer-guide.md).
+
+---
+
+## 🧪 Development
+
+Install a compatible Buf CLI and run:
 
 ```bash
 buf format --diff --exit-code
@@ -65,20 +112,63 @@ buf build
 bash scripts/check-contract-boundary.sh
 ```
 
-CI runs the same checks for pushes and pull requests. Pull requests also run
-`buf breaking` against their Git base; pushes are checked against the stable
-BSR release before publication. The CI workflow installs a checksum-pinned Buf
-CLI and keeps the BSR credential confined to publication and label-archival
-steps.
+CI performs the same baseline contract validation.
 
-## Versioning and releases
+Pull requests also run breaking-change checks against their Git base; pushes are validated against the stable BSR release before publication.
 
-Backward-compatible additions remain in `canopy.v1`. Breaking redesigns use a
-new protobuf package version, such as `canopy.v2`; released `canopy.v1` wire
-semantics are never repurposed. Before changing the contract, read
-[CONTRIBUTING.md](CONTRIBUTING.md), update protobuf comments and consumer
-documentation with the schema, add a [changelog](CHANGELOG.md) entry, and run
-the validation commands above.
+---
 
-See the [compatibility policy](docs/compatibility.md) for additive-change,
-deprecation, and consumer-upgrade rules.
+## 🧱 Compatibility rules
+
+Backward-compatible additions stay in:
+
+```text
+canopy.v1
+```
+
+A breaking redesign belongs in a new package generation such as:
+
+```text
+canopy.v2
+```
+
+Released `canopy.v1` fields and semantics are not repurposed just because both consumers happen to be under active development.
+
+Before changing the contract:
+
+1. read [`CONTRIBUTING.md`](CONTRIBUTING.md);
+2. update Protobuf comments and consumer documentation together;
+3. update [`CHANGELOG.md`](CHANGELOG.md);
+4. run format/lint/build;
+5. run compatibility checks.
+
+See [`docs/compatibility.md`](docs/compatibility.md).
+
+---
+
+## 🔗 Ecosystem
+
+```mermaid
+flowchart LR
+    API["canopy-api<br/>canonical canopy.v1"]
+    PW["PandaWave / PandaEngine"]
+    CAN["Canopy backend"]
+
+    API -->|generated SDK| PW
+    API -->|generated SDK| CAN
+```
+
+| Consumer | Role |
+|---|---|
+| [`PandaWave`](https://github.com/adrianrusu16/PandaWave) | Android/AAOS client with PandaEngine |
+| [`Canopy`](https://github.com/adrianrusu16/Canopy) | Rust/Tonic backend implementation |
+
+---
+
+<div align="center">
+
+**ONE CONTRACT · INDEPENDENT CONSUMERS · EXPLICIT UPGRADES**
+
+[Explore the canopy-api case study →](https://adrianrusu.dev/projects/canopy-api/)
+
+</div>

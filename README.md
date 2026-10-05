@@ -32,6 +32,21 @@ The repository defines **wire shape and shared semantics**. Backend deployment, 
 
 ---
 
+## ⚡ 60-second reviewer path
+
+| If you want to inspect… | Start here |
+|---|---|
+| 📜 **Canonical wire contract** | [`canopy.proto`](proto/canopy/v1/canopy.proto) |
+| 🔐 **Authentication semantics** | [Fail-closed identity semantics](#-fail-closed-identity-semantics) |
+| 📦 **Generated SDK consumption** | [Consumer guide](docs/consumer-guide.md) |
+| 🧱 **Compatibility discipline** | [Compatibility rules](#-compatibility-rules) and [compatibility guide](docs/compatibility.md) |
+| 🧪 **Contract validation** | [Development](#-development) |
+| 🧭 **Guided project narrative** | [canopy-api case study](https://adrianrusu.dev/projects/canopy-api/) |
+
+> **The repository is intentionally narrow:** it owns the shared agreement between client and server, not either implementation.
+
+---
+
 ## 🧭 Contract at a glance
 
 | Item | Location |
